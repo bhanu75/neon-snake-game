@@ -14,7 +14,15 @@ const SnakeGame = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [highScore, setHighScore] = useState(0);
   const [touchStart, setTouchStart] = useState(null);
+  const [gameSpeed, setGameSpeed] = useState('medium');
   const gameAreaRef = useRef(null);
+
+  const speedSettings = {
+    easy: { interval: 200, label: '🐌 EASY', color: 'text-green-400' },
+    medium: { interval: 120, label: '🚀 MEDIUM', color: 'text-yellow-400' },
+    hard: { interval: 80, label: '⚡ HARD', color: 'text-red-400' },
+    insane: { interval: 50, label: '💀 INSANE', color: 'text-purple-400' }
+  };
 
   const generateFood = useCallback(() => {
     let newFood;
@@ -159,7 +167,13 @@ const SnakeGame = () => {
 
       // Check food collision
       if (head.x === food.x && head.y === food.y) {
-        setScore(prev => prev + 10);
+        const speedMultiplier = {
+          easy: 1,
+          medium: 1.5,
+          hard: 2,
+          insane: 3
+        };
+        setScore(prev => prev + Math.floor(10 * speedMultiplier[gameSpeed]));
         setFood(generateFood());
       } else {
         newSnake.pop();
@@ -167,7 +181,7 @@ const SnakeGame = () => {
 
       return newSnake;
     });
-  }, [direction, isPlaying, gameOver, food, score, highScore, generateFood]);
+  }, [direction, isPlaying, gameOver, food, score, highScore, generateFood, gameSpeed]);
 
   const handleKeyPress = useCallback((e) => {
     if (!isPlaying) return;
@@ -198,9 +212,9 @@ const SnakeGame = () => {
   }, [handleKeyPress]);
 
   useEffect(() => {
-    const gameInterval = setInterval(moveSnake, 120);
+    const gameInterval = setInterval(moveSnake, speedSettings[gameSpeed].interval);
     return () => clearInterval(gameInterval);
-  }, [moveSnake]);
+  }, [moveSnake, gameSpeed]);
 
   const renderCell = (x, y) => {
     const isSnakeHead = snake[0]?.x === x && snake[0]?.y === y;
@@ -234,6 +248,32 @@ const SnakeGame = () => {
           <p className="text-gray-400 text-sm">Touch anywhere to control</p>
         </div>
 
+        {/* Speed Control */}
+        <div className="mb-4 bg-gray-800/50 rounded-2xl p-4 border border-gray-700">
+          <div className="text-center text-sm text-gray-400 mb-3 font-semibold">🎮 GAME SPEED</div>
+          <div className="grid grid-cols-2 gap-2">
+            {Object.entries(speedSettings).map(([speed, config]) => (
+              <button
+                key={speed}
+                onClick={() => setGameSpeed(speed)}
+                disabled={isPlaying}
+                className={`px-4 py-3 rounded-xl text-sm font-bold border transition-all duration-200 ${
+                  gameSpeed === speed
+                    ? `${config.color} border-current bg-current/20 shadow-lg scale-105`
+                    : 'text-gray-400 border-gray-600 hover:border-gray-500 bg-gray-800/50 hover:bg-gray-700/50'
+                } ${isPlaying ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105 cursor-pointer active:scale-95'}`}
+              >
+                {config.label}
+              </button>
+            ))}
+          </div>
+          {isPlaying && (
+            <div className="text-center text-xs text-gray-500 mt-2">
+              ⚠️ Speed locked during game
+            </div>
+          )}
+        </div>
+
         {/* Score Board */}
         <div className="flex justify-between items-center mb-6 bg-gray-800/50 rounded-2xl p-4 border border-gray-700">
           <div className="text-center">
@@ -262,16 +302,6 @@ const SnakeGame = () => {
           >
             {Array.from({ length: BOARD_SIZE }, (_, y) =>
               Array.from({ length: BOARD_SIZE }, (_, x) => renderCell(x, y))
-            )}
-            
-            {/* Touch zones overlay (invisible) */}
-            {isPlaying && (
-              <>
-                {/* Up zone */}
-                <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 pointer-events-none">
-                  <div className="col-start-2 row-start-1"></div>
-                </div>
-              </>
             )}
           </div>
         </div>
@@ -303,6 +333,9 @@ const SnakeGame = () => {
           {isPlaying && (
             <div className="space-y-3">
               <div className="text-green-400 font-bold animate-pulse">🎮 PLAYING...</div>
+              <div className={`text-sm ${speedSettings[gameSpeed].color}`}>
+                {speedSettings[gameSpeed].label}
+              </div>
               <button
                 onClick={resetGame}
                 className="bg-gradient-to-r from-red-500 to-orange-600 hover:from-red-600 hover:to-orange-700 text-white font-bold py-2 px-4 rounded-xl shadow-lg transform hover:scale-105 transition-all duration-200 text-sm"
